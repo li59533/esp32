@@ -20,14 +20,15 @@ void app_main()
 
 
 
-
+/*
      // Restart module
-    for (int i = 360; i >= 0; i--) {
+    for (int i = 1200; i >= 0; i--) {
         printf("Restarting in %d seconds...\n", i);
         RTOS_Delay_ms(1000);
     }
     printf("Restarting now.\n");
     fflush(stdout);
-    esp_restart();   
+    esp_restart();  
+*/     
 }
 

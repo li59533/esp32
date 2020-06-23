@@ -30,6 +30,11 @@
  */
 #define NET_TASK_TEST_EVENT 			(0X01 << 0)
 #define NET_TASK_TEST2_EVENT			(0X01 << 1)
+
+#define NET_TASK_INIT_EVENT             (0X01 << 2)
+#define NET_TASK_STA_EVENT              (0X01 << 3)
+#define NET_TASK_UDP_EVENT              (0x01 << 4)
+
 /**
  * @}
  */

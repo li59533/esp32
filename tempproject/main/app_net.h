@@ -63,7 +63,9 @@
  * @defgroup      app_net_Exported_Functions 
  * @{  
  */
-
+void APP_Net_Init(void);
+void APP_NET_STA(void);
+void APP_Net_UDPProcess(void);
 /**
  * @}
  */

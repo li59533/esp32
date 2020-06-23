@@ -23,7 +23,7 @@
  * @{  
  */
 #include "app_net.h"
-#include "bsp_wifi.h"
+
 /**
  * @addtogroup    net_task_Modules 
  * @{  
@@ -139,8 +139,8 @@ void Net_Task(void * pvParameter)
 	DEBUG("Net Task Enter\r\n");
 	UBaseType_t nettask_ramainheap = 0;
 
-    Net_Task_Event_Start(NET_TASK_TEST2_EVENT,EVENT_FROM_TASK);
-
+    //Net_Task_Event_Start(NET_TASK_TEST2_EVENT,EVENT_FROM_TASK);
+    Net_Task_Event_Start(NET_TASK_INIT_EVENT,EVENT_FROM_TASK);
 	while(1)
 	{
 		xTaskNotifyWait(0x00,ULONG_MAX,&event_flag , portMAX_DELAY);
@@ -154,14 +154,28 @@ void Net_Task(void * pvParameter)
 		}
 		if((event_flag & NET_TASK_TEST2_EVENT) != 0x00)
 		{
-            BSP_Wifi_TestCode();
 			DEBUG("Net Task NET_TASK_TEST2_EVENT\r\n");
 
 		}		
-		
-		
+		if((event_flag & NET_TASK_INIT_EVENT) != 0x00)
+		{
+            APP_Net_Init();
+			DEBUG("Net Task INIT EVENT\r\n");
+
+		}				
+		if((event_flag & NET_TASK_STA_EVENT) != 0x00)
+		{
+            APP_NET_STA();
+			DEBUG("Net Task STA EVENT\r\n");
+
+		}		
+        if((event_flag & NET_TASK_UDP_EVENT) != 0x00)
+		{
+            APP_Net_UDPProcess();
+			DEBUG("Net Task UDP EVENT\r\n");
+
+		}			
 	}
-	
 }
 
 
