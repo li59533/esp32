@@ -7,5 +7,6 @@ idf_component_register(SRCS "main.c"
                             "task_list.c"
                             "system_param.c"
                             "app_net.c"
+                            "bsp_wifi.c"
                     INCLUDE_DIRS "")
 

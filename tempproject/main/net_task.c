@@ -23,7 +23,7 @@
  * @{  
  */
 #include "app_net.h"
-
+#include "bsp_wifi.h"
 /**
  * @addtogroup    net_task_Modules 
  * @{  
@@ -112,9 +112,9 @@ uint32_t Net_Task_Init(void)
 {
 	BaseType_t basetype = { 0 };
 
-    basetype = xTaskCreatePinnedToCore(Net_Task,\
+        basetype = xTaskCreatePinnedToCore(Net_Task,\
 							"Net Task",\
-							1024,
+							4096,
 							NULL,
 							 2 ,
 							&Net_Task_Handle,
@@ -139,6 +139,8 @@ void Net_Task(void * pvParameter)
 	DEBUG("Net Task Enter\r\n");
 	UBaseType_t nettask_ramainheap = 0;
 
+    Net_Task_Event_Start(NET_TASK_TEST2_EVENT,EVENT_FROM_TASK);
+
 	while(1)
 	{
 		xTaskNotifyWait(0x00,ULONG_MAX,&event_flag , portMAX_DELAY);
@@ -152,6 +154,7 @@ void Net_Task(void * pvParameter)
 		}
 		if((event_flag & NET_TASK_TEST2_EVENT) != 0x00)
 		{
+            BSP_Wifi_TestCode();
 			DEBUG("Net Task NET_TASK_TEST2_EVENT\r\n");
 
 		}		
@@ -179,6 +182,7 @@ void Net_Task_Event_Start(uint32_t events, uint8_t event_from)
 		default:break;
 	}
 }
+
 
 
 

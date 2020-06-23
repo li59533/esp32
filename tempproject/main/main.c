@@ -3,7 +3,7 @@
 #include "rtos_tools.h"
 #include "task_list.h"
 #include "system_param.h"
-
+#include "esp_system.h"
 
 void app_main()
 {
@@ -12,8 +12,22 @@ void app_main()
     RTOS_Delay_ms(1000);
     DEBUG("Start\n");
     SystemParam_Init();
-    SystemParam_Read();
+    int16_t temp = 0;
+    temp = SystemParam_Read();
+    printf("temp: %d\n" , temp);
 
     RTOS_Init();
+
+
+
+
+     // Restart module
+    for (int i = 360; i >= 0; i--) {
+        printf("Restarting in %d seconds...\n", i);
+        RTOS_Delay_ms(1000);
+    }
+    printf("Restarting now.\n");
+    fflush(stdout);
+    esp_restart();   
 }
 
