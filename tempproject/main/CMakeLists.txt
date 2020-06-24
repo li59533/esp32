@@ -7,5 +7,7 @@ idf_component_register(SRCS "main.c"
                             "task_list.c"
                             "system_param.c"
                             "app_net.c"
+                            "app_uart.c"
+                            "uart_task.c"
                     INCLUDE_DIRS "")
 

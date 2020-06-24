@@ -22,6 +22,7 @@
 #include "first_task.h"
 #include "second_task.h"
 #include "net_task.h"
+#include "uart_task.h"
 
 /**
  * @addtogroup    task_list_Modules 
@@ -111,6 +112,7 @@ void RTOS_Init(void)
 	basetype = First_Task_Init();
 	basetype = Second_Task_Init();	
 	basetype = Net_Task_Init();
+    basetype = Uart_Task_Init();
 
 	if(pdPASS == basetype)
 	{
