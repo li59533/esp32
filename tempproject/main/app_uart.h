@@ -69,7 +69,7 @@ void APP_Uart_SendBytes(uint8_t * buf , uint16_t len);
 // -------------------Test Code --------------------------
 
 void APP_Uart_TestCode(void);
-
+void APP_Uart_TestCode2(void);
 
 /**
  * @}

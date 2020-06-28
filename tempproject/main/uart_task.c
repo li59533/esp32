@@ -98,6 +98,8 @@ TaskHandle_t  Uart_Task_Handle = NULL;
  */
 
 static void uart_task_tim_callback(TimerHandle_t xTimer);
+
+static void rx_task();
 /**
  * @}
  */
@@ -112,13 +114,21 @@ uint32_t Uart_Task_Init(void)
 {
 	BaseType_t basetype = { 0 };
 
-    basetype = xTaskCreatePinnedToCore(Uart_Task,\
+    basetype |= xTaskCreatePinnedToCore(Uart_Task,\
 							"Uart Task",\
 							4096,
 							NULL,
 							 2 ,
 							&Uart_Task_Handle,
                             tskNO_AFFINITY);
+
+    basetype |= xTaskCreatePinnedToCore(rx_task,\
+                        "rx_task",\
+                        8192,
+                        NULL,
+                        configMAX_PRIORITIES ,
+                        NULL,
+                        tskNO_AFFINITY);                        
     /*
 	basetype = xTaskCreate(Uart_Task,\
 							"Uart Task",\
@@ -131,6 +141,11 @@ uint32_t Uart_Task_Init(void)
 	return basetype;
 }
 
+
+static void rx_task()
+{
+    APP_Uart_TestCode2();
+}
 
 void Uart_Task(void * pvParameter)
 {
