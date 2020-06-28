@@ -5,10 +5,11 @@
 #include "system_param.h"
 #include "esp_system.h"
 
+#include "version.h"
+
 void app_main()
 {
-    RTOS_Delay_ms(1000);
-    DEBUG("Version:\n");
+    DEBUG("Version:%s\n",Version_Get_Str());
     RTOS_Delay_ms(1000);
     DEBUG("Start\n");
     SystemParam_Init();
@@ -29,6 +30,7 @@ void app_main()
     printf("Restarting now.\n");
     fflush(stdout);
     esp_restart();  
-*/     
+*/
+     
 }
 

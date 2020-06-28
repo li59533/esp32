@@ -112,7 +112,7 @@ static const int RX_BUF_SIZE = 1024;
 void APP_Uart_Init(void)
 {
     const uart_config_t uart_config = {
-    .baud_rate = 115200,
+    .baud_rate = 115200,//115200,
     .data_bits = UART_DATA_8_BITS,
     .parity = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
