@@ -171,10 +171,14 @@ void Net_Task(void * pvParameter)
 		}		
         if((event_flag & NET_TASK_UDP_EVENT) != 0x00)
 		{
-            APP_Net_UDPProcess();
 			DEBUG("Net Task UDP EVENT\r\n");
-
+            APP_Net_UDPProcess();
 		}			
+        if((event_flag & NET_TASK_UDP_SEND_EVENT) != 0x00)
+		{
+            DEBUG("Net Task UDP SEND EVENT\r\n");
+            APP_Net_UDPSend_Process();
+		}		        
 	}
 }
 

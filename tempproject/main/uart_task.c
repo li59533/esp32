@@ -144,7 +144,7 @@ uint32_t Uart_Task_Init(void)
 
 static void rx_task()
 {
-    APP_Uart_TestCode2();
+    APP_Uart_RevProcess();
 }
 
 void Uart_Task(void * pvParameter)

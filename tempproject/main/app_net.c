@@ -89,7 +89,28 @@ static const char *TAG = "wifi station";
  * @brief         
  * @{  
  */
+#define APP_NET_UDPSEND_QUEUE_NUM       1
+#define APP_NET_UDPSEND_SPACE_LEN     4096
+static uint8_t app_net_udpsend_space[APP_NET_UDPSEND_SPACE_LEN] = { 0 };
 
+typedef struct 
+{
+    uint8_t *buf;
+    uint16_t size ;
+    uint16_t in;
+    uint16_t out;
+    uint16_t count;
+}APP_Net_UDPSendQueue_t;
+
+
+APP_Net_UDPSendQueue_t APP_Net_UDPSendQueue[APP_NET_UDPSEND_QUEUE_NUM] = 
+{
+    .buf = app_net_udpsend_space,
+    .size = APP_NET_UDPSEND_SPACE_LEN,
+    .in = 0,
+    .out = 0,
+    .count = 0,
+};
 /**
  * @}
  */
@@ -186,6 +207,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
+int sock = 0;
+
 void APP_Net_UDPProcess(void)
 {
     /*
@@ -204,13 +227,7 @@ void APP_Net_UDPProcess(void)
     ip_protocol = IPPROTO_IP;
     inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
 
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-    uint8_t payload[1024] = {0x12,0x45,0xff,0xac,0xbb,0xdc,0x10,0x00,0x88};
-    int err = sendto(sock, payload, 1024, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-
-/*
-    int len = recvfrom(sock, rx_buffer, sizeof(rx_buffer) - 1, 0, (struct sockaddr *)&source_addr, &socklen);
+    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
     if (sock != -1) 
     {
@@ -218,8 +235,95 @@ void APP_Net_UDPProcess(void)
         shutdown(sock, 0);
         close(sock);
     }
-*/
+    else
+    {
+        DEBUG("Socket:%d OK!\n" , sock);
+    }
+    
+
 }
+
+int APP_Net_UDPSendBytes(int socketNUM , uint8_t * buf , uint16_t len ,uint32_t dest_ip , uint32_t port)
+{
+    struct sockaddr_in dest_addr;
+    char addr_str[128];
+    dest_addr.sin_addr.s_addr = dest_ip;
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(port);
+    inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+
+    int err = sendto(socketNUM, buf, len, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    return err;
+}
+
+
+
+void APP_Net_UDP_SendEnqueue(uint8_t udp_queue_num , uint8_t * buf , uint16_t len)
+{
+    if(udp_queue_num >= APP_NET_UDPSEND_QUEUE_NUM)
+    {
+        return ;
+    }
+
+    if(len <= APP_Net_UDPSendQueue[udp_queue_num].size)
+    {
+        for(uint16_t i = 0 ; i < len ; i ++)
+        {
+            APP_Net_UDPSendQueue[udp_queue_num].buf[APP_Net_UDPSendQueue[udp_queue_num].in] = buf[i];
+            APP_Net_UDPSendQueue[udp_queue_num].in ++;
+            APP_Net_UDPSendQueue[udp_queue_num].in %= APP_Net_UDPSendQueue[udp_queue_num].size;
+            APP_Net_UDPSendQueue[udp_queue_num].count ++;
+        }
+    }
+    else
+    {
+        DEBUG("UDP Enqueue Err\n");
+    }
+}
+
+uint16_t APP_Net_UDP_SendQueue_Count(uint8_t udp_queue_num)
+{
+    return  APP_Net_UDPSendQueue[udp_queue_num].count ;
+}
+
+int8_t  APP_Net_UDP_SendDequeue(uint8_t udp_queue_num , uint8_t * buf ,uint16_t * len)
+{
+    if(udp_queue_num >= APP_NET_UDPSEND_QUEUE_NUM)
+    {
+        return -1;
+    }
+
+    len = APP_Net_UDPSendQueue[udp_queue_num].count;
+    for(uint16_t i = 0 ; i < len ; i ++)
+    {
+        buf[i] = APP_Net_UDPSendQueue[udp_queue_num].buf[APP_Net_UDPSendQueue[udp_queue_num].out];
+        APP_Net_UDPSendQueue[udp_queue_num].out ++;
+        APP_Net_UDPSendQueue[udp_queue_num].out %= APP_Net_UDPSendQueue[udp_queue_num].size;
+        APP_Net_UDPSendQueue[udp_queue_num].count --;
+    }
+
+    return 1;
+}
+
+
+void APP_Net_UDPSend_Process(void)
+{
+    if(sock != -1)
+    {
+        if(APP_Net_UDP_SendQueue_Count(0) > 0)
+        {
+
+            int8_t  APP_Net_UDP_SendDequeue(uint8_t udp_queue_num , uint8_t * buf ,uint16_t * len)
+            int err = APP_Net_UDPSendBytes(sock , uint8_t * buf , uint16_t len ,uint32_t dest_ip , uint32_t port);
+            DEBUG("UDP Send Func return:%d\n" , err); 
+        }
+        
+    }
+    
+}
+
+
+
 
 /**
  * @}
