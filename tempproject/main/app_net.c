@@ -29,6 +29,9 @@
 #include "lwip/sys.h"
 #include <lwip/netdb.h>
 
+#include "net_task.h"
+#include "rtos_tools.h"
+
 /**
  * @addtogroup    app_net_Modules 
  * @{  
@@ -105,11 +108,12 @@ typedef struct
 
 APP_Net_UDPSendQueue_t APP_Net_UDPSendQueue[APP_NET_UDPSEND_QUEUE_NUM] = 
 {
-    .buf = app_net_udpsend_space,
-    .size = APP_NET_UDPSEND_SPACE_LEN,
-    .in = 0,
-    .out = 0,
-    .count = 0,
+    {
+        .in = 0,
+        .out = 0,
+        .count = 0,        
+    }
+
 };
 /**
  * @}
@@ -144,17 +148,20 @@ typedef enum
 
 APP_Net_Param_t APP_Net_Param = 
 {
-    .Cur_Mode = Net_Mode_UDP,
+    .Cur_Mode = Net_Mode_UDP
 };
 
 void APP_Net_Init(void)
 {
     APP_Net_Param.Cur_Mode = g_SystemParam_Config.Net_Mode;
+
+    APP_Net_UDP_SendQueue_Init();
     Net_Task_Event_Start(NET_TASK_STA_EVENT,EVENT_FROM_TASK);
 }
 
 void APP_NET_STA(void)
 {
+
     tcpip_adapter_init(); // TCP/IP Init
     //ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
@@ -169,10 +176,17 @@ void APP_NET_STA(void)
         },
     };  
 
+    tcpip_adapter_ip_info_t ip_info;
+    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
+    ESP_LOGI(TAG, "ip_info IP:%s" , inet_ntoa(ip_info.ip));
+    ESP_LOGI(TAG, "ip_info Netmask:%s" , inet_ntoa(ip_info.netmask));
+    ESP_LOGI(TAG, "ip_info GW:%s" , inet_ntoa(ip_info.gw));
+
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());  
-    ESP_ERROR_CHECK( esp_wifi_connect() );
+    ESP_ERROR_CHECK(esp_wifi_connect());
 
     ESP_LOGI(TAG, "wifi_init_sta finished.");
     ESP_LOGI(TAG, "connect to ap SSID:%s password:%s \n",\
@@ -215,21 +229,45 @@ void APP_Net_UDPProcess(void)
     SOCK_DGRAM - > UDP
     SOCK_STREAM - > TCP
     */
-    char rx_buffer[128];
-    char addr_str[128];
-    int addr_family;
-    int ip_protocol;
-    struct sockaddr_in dest_addr;
-    dest_addr.sin_addr.s_addr = inet_addr("192.168.2.100");
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(20000);
-    addr_family = AF_INET;
-    ip_protocol = IPPROTO_IP;
-    inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+
+    //char addr_str[128];
+
+    // struct sockaddr_in dest_addr;
+    // dest_addr.sin_addr.s_addr = inet_addr("192.168.2.100");
+    // dest_addr.sin_family = AF_INET;
+    // dest_addr.sin_port = htons(20000);
+
+
+    //inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+//-----------------------ip Info Log----------------------------
+    tcpip_adapter_ip_info_t ip_info;
+    ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA , &ip_info));
+
+    ESP_LOGI(TAG, "ip_info IPx:      %X" , *(uint32_t *)(&ip_info.ip));
+    ESP_LOGI(TAG, "ip_info Netmaskx: %X" , *(uint32_t *)(&ip_info.netmask));
+    ESP_LOGI(TAG, "ip_info GWx:      %X" , *(uint32_t *)(&ip_info.gw));
+
+    ESP_LOGI(TAG, "ip_info IP:      %s" , inet_ntoa(ip_info.ip));
+    ESP_LOGI(TAG, "ip_info Netmask: %s" , inet_ntoa(ip_info.netmask));
+    ESP_LOGI(TAG, "ip_info GW:      %s" , inet_ntoa(ip_info.gw));
+
+    tcpip_adapter_dns_info_t dns;
+
+    ESP_ERROR_CHECK( tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
+    ESP_LOGI(TAG, "ip_info DNSx:      %X" , *(uint32_t *)(&dns.ip));
+    ESP_LOGI(TAG, "ip_info DNS:      %s" , inet_ntoa(dns.ip));
+    uint32_t dns_test = 0x08080808;
+    memcpy((uint8_t *)&dns.ip ,(uint8_t *)&dns_test , 4  );
+    ESP_ERROR_CHECK( tcpip_adapter_set_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
+
+    ESP_ERROR_CHECK( tcpip_adapter_get_dns_info(TCPIP_ADAPTER_IF_STA, TCPIP_ADAPTER_DNS_MAIN, &dns));
+    ESP_LOGI(TAG, "ip_info DNSx:      %X" , *(uint32_t *)(&dns.ip));
+    ESP_LOGI(TAG, "ip_info DNS:      %s" , inet_ntoa(dns.ip));   
+// -----------------------------------------------------------
 
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
 
-    if (sock != -1) 
+    if (sock == -1) 
     {
         ESP_LOGE(TAG, "Shutting down socket and restarting...");
         shutdown(sock, 0);
@@ -255,8 +293,62 @@ int APP_Net_UDPSendBytes(int socketNUM , uint8_t * buf , uint16_t len ,uint32_t 
     int err = sendto(socketNUM, buf, len, 0, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
     return err;
 }
+int APP_Net_UDPRevBytes(int socketNUM , uint8_t * buf , uint16_t len ,uint32_t * dest_ip , uint32_t * port)
+{
+    struct sockaddr_in dest_addr;
+    int16_t iplen;
+    int revlen = recvfrom(socketNUM, buf, len, 0, (struct sockaddr *)&dest_addr, &iplen);
+    *dest_ip = dest_addr.sin_addr.s_addr;
+    *port = htons(dest_addr.sin_port);
+
+    return revlen;
+}
 
 
+
+void APP_Net_UDP_RevProcess(void)
+{
+    static const char *UDP_Rev_TAG = "UDP_Rev_TASK";
+    esp_log_level_set(UDP_Rev_TAG, ESP_LOG_INFO);
+    uint8_t* data = (uint8_t*) malloc(1024+1);
+    while (1) 
+    {
+        if(sock != -1)
+        {
+            int16_t rev_len = 0 ;
+            uint32_t dest_ip;// = inet_addr("192.168.2.101");
+            uint32_t port;// = 20000;
+
+            rev_len = APP_Net_UDPRevBytes( sock , data , 1024 , &dest_ip ,  &port);
+
+            if (rev_len > 0) 
+            {
+                data[rev_len] = 0;
+
+                ESP_LOGI(UDP_Rev_TAG, "IP %s ", inet_ntoa(dest_ip));
+                ESP_LOGI(UDP_Rev_TAG, "port %d ", port);
+                ESP_LOGI(UDP_Rev_TAG, "Read %d ", rev_len);
+                DEBUG("-------------------\n");
+                ESP_LOG_BUFFER_HEXDUMP(UDP_Rev_TAG, data, rev_len, ESP_LOG_INFO);
+            }            
+        }
+
+        RTOS_Delay_ms(500);
+    }
+    free(data);
+}
+
+
+
+
+void APP_Net_UDP_SendQueue_Init(void)
+{
+    APP_Net_UDPSendQueue[0].buf = app_net_udpsend_space;
+    APP_Net_UDPSendQueue[0].count = 0;
+    APP_Net_UDPSendQueue[0].in = 0;
+    APP_Net_UDPSendQueue[0].out = 0;
+    APP_Net_UDPSendQueue[0].size = APP_NET_UDPSEND_SPACE_LEN;
+}
 
 void APP_Net_UDP_SendEnqueue(uint8_t udp_queue_num , uint8_t * buf , uint16_t len)
 {
@@ -274,6 +366,9 @@ void APP_Net_UDP_SendEnqueue(uint8_t udp_queue_num , uint8_t * buf , uint16_t le
             APP_Net_UDPSendQueue[udp_queue_num].in %= APP_Net_UDPSendQueue[udp_queue_num].size;
             APP_Net_UDPSendQueue[udp_queue_num].count ++;
         }
+
+        Net_Task_Event_Start(NET_TASK_UDP_SEND_EVENT, EVENT_FROM_TASK);
+
     }
     else
     {
@@ -293,8 +388,8 @@ int8_t  APP_Net_UDP_SendDequeue(uint8_t udp_queue_num , uint8_t * buf ,uint16_t 
         return -1;
     }
 
-    len = APP_Net_UDPSendQueue[udp_queue_num].count;
-    for(uint16_t i = 0 ; i < len ; i ++)
+    *len = APP_Net_UDPSendQueue[udp_queue_num].count;
+    for(uint16_t i = 0 ; i < *len ; i ++)
     {
         buf[i] = APP_Net_UDPSendQueue[udp_queue_num].buf[APP_Net_UDPSendQueue[udp_queue_num].out];
         APP_Net_UDPSendQueue[udp_queue_num].out ++;
@@ -312,17 +407,55 @@ void APP_Net_UDPSend_Process(void)
     {
         if(APP_Net_UDP_SendQueue_Count(0) > 0)
         {
+            uint8_t * send_buf = 0;
+            uint16_t len = 0;
+            send_buf = malloc(4096 * sizeof(uint8_t));
+            if(  APP_Net_UDP_SendDequeue(0 , send_buf ,&len) == 1)
+            {
+                uint32_t dest_ip = inet_addr("192.168.2.101");
+                uint32_t port = 20000;
+                int err = APP_Net_UDPSendBytes(sock , send_buf , len ,dest_ip ,  port);
+                DEBUG("UDP Send Func return:%d\n" , err); 
+            }
+            else
+            {
+                /* code */
+            }
 
-            int8_t  APP_Net_UDP_SendDequeue(uint8_t udp_queue_num , uint8_t * buf ,uint16_t * len)
-            int err = APP_Net_UDPSendBytes(sock , uint8_t * buf , uint16_t len ,uint32_t dest_ip , uint32_t port);
-            DEBUG("UDP Send Func return:%d\n" , err); 
+            free(send_buf);
+        }
+
+
+        if(APP_Net_UDP_SendQueue_Count(0) > 0)
+        {
+            Net_Task_Event_Start(NET_TASK_UDP_SEND_EVENT, EVENT_FROM_TASK);
         }
         
     }
     
 }
 
+// ------------Test Code ---------------
 
+void APP_Net_UDP_TestCode(void)
+{
+    uint8_t send_test[1024] = { 0 };
+
+    for(uint16_t i = 0 ; i < 1024 ; i ++)
+    {
+        send_test[i] = (uint8_t )i;
+    }
+
+    for(uint8_t i = 0 ; i < 3; i ++)
+    {
+        APP_Net_UDP_SendEnqueue( 0 , send_test , 1024);     
+    }
+    
+}
+
+
+
+// -------------------------------------
 
 
 /**

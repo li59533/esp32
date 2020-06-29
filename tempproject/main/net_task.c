@@ -98,6 +98,7 @@ TaskHandle_t  Net_Task_Handle = NULL;
  */
 
 static void net_task_tim_callback(TimerHandle_t xTimer);
+static void UDPRev_task();
 /**
  * @}
  */
@@ -119,6 +120,14 @@ uint32_t Net_Task_Init(void)
 							 2 ,
 							&Net_Task_Handle,
                             tskNO_AFFINITY);
+
+        basetype |= xTaskCreatePinnedToCore(UDPRev_task,\
+                    "UDPRev_task",\
+                    8192,
+                    NULL,
+                    configMAX_PRIORITIES ,
+                    NULL,
+                    tskNO_AFFINITY);      
     /*
 	basetype = xTaskCreate(Net_Task,\
 							"Net Task",\
@@ -131,6 +140,10 @@ uint32_t Net_Task_Init(void)
 	return basetype;
 }
 
+static void UDPRev_task()
+{
+    APP_Net_UDP_RevProcess();
+}
 
 void Net_Task(void * pvParameter)
 {
@@ -178,6 +191,7 @@ void Net_Task(void * pvParameter)
 		{
             DEBUG("Net Task UDP SEND EVENT\r\n");
             APP_Net_UDPSend_Process();
+            
 		}		        
 	}
 }

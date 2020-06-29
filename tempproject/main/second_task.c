@@ -20,7 +20,7 @@
  * @{  
  */
 
-
+#include "app_net.h"
 
 /**
  * @addtogroup    second_task_Modules 
@@ -110,7 +110,7 @@ uint32_t Second_Task_Init(void)
 
     basetype = xTaskCreatePinnedToCore(Second_Task,\
 							"Second_Task",\
-							1024,
+							2048,
 							NULL,
 							 3 ,
 							&Second_Task_Handle,
@@ -134,6 +134,7 @@ void Second_Task(void * pvParameter)
 	{
 		DEBUG("Second Task Looping\r\n");
 		vTaskDelay(pdMS_TO_TICKS(1000));
+        APP_Net_UDP_TestCode();
 	}
 	
 }
